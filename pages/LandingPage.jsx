@@ -1,23 +1,24 @@
-import React, { useState, useRef } from 'react';
+import { useNavigation } from '@react-navigation/native';
+import { createStackNavigator } from '@react-navigation/stack';
+import { LinearGradient } from 'expo-linear-gradient';
+import React, { useRef, useState } from 'react';
 import {
-  StyleSheet,
-  Text,
-  View,
+  Alert,
   Animated,
-  Easing,
-  TextInput,
-  TouchableOpacity,
-  ScrollView,
   Dimensions,
   Image,
   Linking,
-  Alert,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome5';
-import { LinearGradient } from 'expo-linear-gradient';
-import { createStackNavigator } from '@react-navigation/stack';
-import { useNavigation } from '@react-navigation/native';
-import { firebase } from '../firebaseConfig'; // Importando o firebase
+import { firebase } from '../firebaseConfig'; 
+import emailjs from '@emailjs/browser';
+
+
 
 const { width } = Dimensions.get('window');
 const Stack = createStackNavigator();
@@ -108,7 +109,11 @@ const Form = ({ onSubmit }) => {
   const [descricao, setDescricao] = useState('');
 
   const handleSubmit = () => {
-    onSubmit({ nome, email, telefone, servico, descricao });
+    if (email && nome) { // Verifica se o nome e o email estão preenchidos
+      onSubmit({ nome, email, telefone, servico, descricao });
+    } else {
+      Alert.alert('Erro!', 'Por favor, preencha todos os campos obrigatórios.');
+    }
   };
 
   return (
@@ -230,7 +235,7 @@ const ScrollAnimado = ({ children, scrollY }) => {
 
 // Componente InicioScreen
 const InicioScreen = () => {
-  const scrollY = useRef(new Animated.Value(0)).current;
+  const scrollY = useRef(new Animated.Value( 0)).current;
 
   return (
     <View style={styles.container}>
@@ -372,7 +377,7 @@ const ServicosScreen = () => {
               },
             ].map((service, index) => (
               <Animated.View
-                key={index}
+                key ={index}
                 style={[
                   styles.serviceCard,
                   {
@@ -432,7 +437,7 @@ const AplicativosScreen = () => {
                 title: 'AgroWalker',
                 description:
                   'Gerencie sua propriedade rural de forma digital e eficiente, com controle de plantio, estoque e finanças. Aumente a produtividade, otimize seus recursos e tome decisões estratégicas com dados precisos e ferramentas intuitivas. Tenha uma gestão completa e controle total sobre sua fazenda.',
-                link: 'agrowalker-8073f.web.app',
+                link: 'https://agrowalker-8073f.web.app',
               },
               {
                 icon: 'id-card-o',
@@ -556,9 +561,8 @@ const DepoimentosScreen = () => {
   );
 };
 
-// Componente ContatoScreen
-const ContatoScreen = () => {
-  const scrollY = useRef(new Animated.Value(0)).current;
+
+export const ContatoScreen = () => {
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
   const [telefone, setTelefone] = useState('');
@@ -566,99 +570,109 @@ const ContatoScreen = () => {
   const [mensagem, setMensagem] = useState('');
 
   const handleSubmit = () => {
-    firebase
-      .firestore()
-      .collection('contato')
-      .add({
-        nome: nome,
-        email: email,
-        telefone: telefone,
-        assunto: assunto,
-        mensagem: mensagem,
-        data: new Date(),
-      })
-      .then(() => {
-        Alert.alert('Sucesso!', 'Sua mensagem foi enviada com sucesso!');
-        setNome('');
-        setEmail('');
-        setTelefone('');
-        setAssunto('');
-        setMensagem('');
-      })
-      .catch((error) => {
-        Alert.alert('Erro!', 'Ocorreu um erro ao enviar sua mensagem.');
-        console.error('Error adding document: ', error);
-      });
+    // Verifica se todos os campos estão preenchidos
+    if (nome && email && telefone && assunto && mensagem) {
+      const templateParams = {
+        nome,
+        email,
+        telefone,
+        assunto,
+        mensagem,
+      };
+
+      // Envia os dados do formulário para o backend via EmailJS
+      emailjs
+        .send('service_qhb191t', 'template_hdv1a3e', templateParams, 'fjy4qzR9lH8kAaraw')
+        .then(
+          (response) => {
+            console.log('Formulário enviado com sucesso:', response);
+            Alert.alert('Sucesso!', 'Mensagem enviada com sucesso!');
+            
+            // Envia a resposta automática para o usuário
+            const autoResponseParams = {
+              nome,
+              email, // O e-mail do usuário para responder
+            };
+
+            emailjs
+              .send('service_qhb191t', 'template_hdv1a3e', autoResponseParams, 'fjy4qzR9lH8kAaraw')
+              .then(
+                (autoResponse) => {
+                  console.log('Resposta automática enviada com sucesso:', autoResponse);
+                },
+                (error) => {
+                  console.log('Erro ao enviar resposta automática:', error.text);
+                }
+              );
+            
+            // Limpa os campos do formulário após o envio
+            setNome('');
+            setEmail('');
+            setTelefone('');
+            setAssunto('');
+            setMensagem('');
+          },
+          (error) => {
+            console.log('Erro ao enviar formulário:', error.text);
+            Alert.alert('Erro!', 'Ocorreu um erro ao enviar sua mensagem.');
+          }
+        );
+    } else {
+      Alert.alert('Erro!', 'Por favor, preencha todos os campos obrigatórios.');
+    }
   };
 
   return (
     <View style={styles.container}>
-      <HeaderAnimado scrollY={scrollY} />
-
-      <ScrollAnimado scrollY={scrollY}>
-        {/* Contact Section */}
-        <View style={styles.contactSection}>
-          <Text style={styles.sectionTitle}>Entre em Contato</Text>
-          <Text style={styles.sectionSubtitle}>
-            Tem alguma dúvida? Quer saber mais sobre nossos serviços? Entre em contato conosco!
-          </Text>
-          <View style={styles.formContainer}>
-            <View style={styles.inputGroup}>
-              <TextInput
-                style={styles.input}
-                placeholder="Nome"
-                placeholderTextColor="#737373"
-                value={nome}
-                onChangeText={setNome}
-              />
-            </View>
-            <View style={styles.inputGroup}>
-              <TextInput
-                style={styles.input}
-                placeholder="Email"
-                placeholderTextColor="#737373"
-                value={email}
-                onChangeText={setEmail}
-              />
-            </View>
-            <View style={styles.inputGroup}>
-              <TextInput
-                style={styles.input}
-                placeholder="Telefone"
-                placeholderTextColor="#737373"
-                value={telefone}
-                onChangeText={setTelefone}
-              />
-            </View>
-            <View style={styles.inputGroup}>
-              <TextInput
-                style={styles.input}
-                placeholder="Assunto"
-                placeholderTextColor="#737373"
-                value={assunto}
-                onChangeText={setAssunto}
-              />
-            </View>
-            <View style={styles.inputGroup}>
-              <TextInput
-                style={styles.input}
-                placeholder="Mensagem"
-                placeholderTextColor="#737373"
-                multiline
-                value={mensagem}
-                onChangeText={setMensagem}
-              />
-            </View>
-            <TouchableOpacity style={styles.primaryButton} onPress={handleSubmit}>
-              <Text style={styles.primaryButtonText}>Enviar Mensagem</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </ScrollAnimado>
-      <Footer />
+      <Text style={styles.sectionTitle}>Entre em Contato</Text>
+      <Text style={styles.sectionSubtitle}>
+        Tem alguma dúvida? Quer saber mais sobre nossos serviços? Entre em contato conosco!
+      </Text>
+      <View style={styles.formContainer}>
+        <TextInput
+          style={styles.input}
+          placeholder="Nome"
+          placeholderTextColor="#737373"
+          value={nome}
+          onChangeText={setNome}
+        />
+        <TextInput
+          style={styles.input}
+          placeholder="Email"
+          placeholderTextColor="#737373"
+          value={email}
+          onChangeText={setEmail}
+        />
+        <TextInput
+          style={styles.input}
+          placeholder="Telefone"
+          placeholderTextColor="#737373"
+          value={telefone}
+          onChangeText={setTelefone}
+        />
+        <TextInput
+          style={styles.input}
+          placeholder="Assunto"
+          placeholderTextColor="#737373"
+          value={assunto}
+          onChangeText={setAssunto}
+        />
+        <TextInput
+          style={styles.input}
+          placeholder="Mensagem"
+          placeholderTextColor="#737373"
+          multiline
+          value={mensagem}
+          onChangeText={setMensagem}
+        />
+        <TouchableOpacity style={styles.primaryButton} onPress={handleSubmit}>
+          <Text style={styles.primaryButtonText}>Enviar Mensagem</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 };
+
 
 // Componente OrcamentoScreen
 const OrcamentoScreen = () => {
@@ -812,7 +826,7 @@ const styles = StyleSheet.create({
   },
   headerTag: {
     color: '#D9534F',
-    fontSize: 16,
+    fontsize: 16,
     fontWeight: '700',
     textTransform: 'uppercase',
   },
@@ -980,7 +994,7 @@ const styles = StyleSheet.create({
 
   // Form Styles
   formContainer: {
-    width: '100%',
+ width: '100%',
   },
   inputGroup: {
     flexDirection: 'row',
